@@ -7,7 +7,7 @@ colors = [(255, 0, 0), (255, 128, 0), (255, 255, 0), (0, 255, 0), (0, 255, 255),
           (128, 0, 255), (255, 0, 128)]
 
 num_bees = 10
-num_flowers = 300
+num_flowers = 100
 num_nectar = 0
 global_traveled_distance = 10000
 max_radio = 100
@@ -19,16 +19,23 @@ class Bee:
         self.favorite_direction = 0
         self.deflection_angle = 0
         self.max_distance = 0
-        self.genes = ""
+        self.genes = []
         self.x = 0
         self.y = 0
 
         self.traveled_distance = 0
         self.max_traveled_distance = 2 * max_radio
-        self.found_flowers = 0
+        self.visited_flowers = []
+        self.adaptability_percentage = 0
 
     def __str__(self):
-        return self.favorite_color, self.favorite_direction, self.deflection_angle, self.max_distance
+        return "found flowers: {} \t adaptability: {} \t\t color: {} \t\t direction: {}" \
+               " \t\t angle: {} \t\t max distance: {}".format(len(self.visited_flowers),
+                                                              round(self.adaptability_percentage, 2),
+                                                              self.favorite_color,
+                                                              self.favorite_direction,
+                                                              self.deflection_angle,
+                                                              self.max_distance)
 
     def generate_parent(self):
         self.favorite_color = random.choice(colors)
@@ -36,46 +43,45 @@ class Bee:
         self.deflection_angle = round(random.uniform(10, 45), 2)
         self.max_distance = round(random.uniform(max_radio / 2, max_radio), 2)
 
-        # self.genes = self.favorite_color + self.favorite_direction + self.deflection_angle + self.max_distance
+        self.genes += [self.favorite_color, self.favorite_direction, self.deflection_angle, self.max_distance]
 
     def route(self, flowers):
         flowers_in_area = []
-        route = []
+        favorite_flowers = []  # flowers in area with bee's fav color
 
         for flower in flowers:
-            if self.favorite_direction - self.deflection_angle < flower.angle < self.favorite_direction + self.deflection_angle:
+            if self.favorite_direction - self.deflection_angle < flower.angle \
+                    < self.favorite_direction + self.deflection_angle and flower.radio <= self.max_distance:
                 flowers_in_area.append(flower)
-
         for flower in flowers_in_area:
             if flower.color == self.favorite_color:
-                route.append(flower)
+                favorite_flowers.append(flower)
+        favorite_flowers.sort(key=lambda f: f.radio)
 
-        route.sort(key=lambda f: f.radio)
-
-        print("\n\n\nfavs")
-        for i in route:
+        print("\n\nin area: ", len(flowers_in_area))
+        print("favs")
+        for i in favorite_flowers:
             print(i)
 
-        print("\n\n")
-
-        # flag = True
         while self.traveled_distance <= self.max_traveled_distance:
-            if len(route) > 0:
-                distance = sqrt((route[0].x - self.x) ** 2 + (route[0].y - self.y) ** 2)
+            if len(favorite_flowers) > 0:
+                distance = sqrt((favorite_flowers[0].x - self.x) ** 2 + (favorite_flowers[0].y - self.y) ** 2)
                 if self.traveled_distance + distance > self.max_traveled_distance:
                     print("se salio", self.traveled_distance + distance)
-                    # flag = False
                     break
                 else:
-                    self.found_flowers += 1
-                    self.x = route[0].x
-                    self.y = route[0].y
+                    favorite_flowers[0].add_pollen(self.visited_flowers)
+                    self.visited_flowers.append(favorite_flowers[0])
+
+                    self.x = favorite_flowers[0].x
+                    self.y = favorite_flowers[0].y
                     self.traveled_distance += distance
                     print("recorrida: ", self.traveled_distance)
-                    route.remove(route[0])
+
+                    flowers_in_area.remove(favorite_flowers[0])
+                    favorite_flowers.remove(favorite_flowers[0])
 
             else:
-                print("aqui")
                 closest = max_radio * 4
                 closest_flower = None
                 if len(flowers_in_area) > 0:
@@ -87,17 +93,22 @@ class Bee:
 
                     if self.traveled_distance + closest > self.max_traveled_distance:
                         print("se salio2", self.traveled_distance + closest)
-                        # flag = False
                         break
                     else:
-                        self.found_flowers += 1
+                        closest_flower.add_pollen(self.visited_flowers)
+                        self.visited_flowers.append(closest_flower)
+
                         self.x = closest_flower.x
                         self.y = closest_flower.y
                         self.traveled_distance += closest
                         print("recorrida2: ", self.traveled_distance)
                         flowers_in_area.remove(closest_flower)
+
                 else:
-                    # flag = False
+                    print("\t\tCAMBIO DE DIRECCION")
+                    self.favorite_direction = self.favorite_direction = random.choice(directions)
+                    self.route(flowers)
+
                     break
 
     def mutate(self, parent):
@@ -111,10 +122,14 @@ class Flower:
         self.radio = 0
         self.x = 0
         self.y = 0
-        self.bee_pollen = []
+        self.other_flower_pollen = []
 
     def __str__(self):
         return "color:{}, angle:{}, radio:{}".format(self.color, self.angle, self.radio)
+
+    def add_pollen(self, other_flowers):
+        self.other_flower_pollen += other_flowers
+        print("pollen: ", self.other_flower_pollen)
 
     def generate_parent(self):
         self.color = random.choice(colors)
@@ -144,20 +159,41 @@ def init():
         flowers.append(flower)
         num_flowers_aux += 1
 
-    # for bee in bees:
-    #     bee.route(flowers)
+    total_visited_flowers = 0
+    percentage_list = []
+    for bee in bees:
+        bee.route(flowers)
+        total_visited_flowers += len(bee.visited_flowers)
 
-    bees[0].route(flowers)
+    for bee in bees:
+        percentage = len(bee.visited_flowers) / total_visited_flowers
+        bee.adaptability_percentage = percentage
+        percentage_list.append(percentage)
 
-    # print(bees)
-    # for i in bees:
-    #     print(i)
+    print("\n\nRESULT\n")
+    for bee in bees:
+        print(bee)
+
+    print("\n\nEscogidas:")
+    selected_bees = random.choices(bees, weights=percentage_list, k=len(bees))
+    for i in selected_bees:
+        print(i)
+
+    for i in range(len(selected_bees) // 2):
+        parent1 = random.choice(selected_bees)
+        selected_bees.remove(parent1)
+        parent2 = random.choice(selected_bees)
+        selected_bees.remove(parent2)
 
     # for i in flowers:
     #     print(i)
 
     # while True:
     #     break
+
+
+def cross_bees(parent1, parent2):
+    print()
 
 
 if __name__ == '__main__':
