@@ -1,10 +1,13 @@
 import random
-from numpy import sqrt
+from numpy import sqrt, cos, sin
 
 colors = [(255, 0, 0), (255, 128, 0), (255, 255, 0), (0, 255, 0), (0, 255, 255), (0, 0, 255),
           (128, 0, 255), (255, 0, 128)]
+colors_bin = ['000', '001', '010', '011', '100', '101', '110', '111']
 directions = [270, 90, 0, 180, 315, 225, 45, 135]
+directions_bin = ['000', '001', '010', '011', '100', '101', '110', '111']
 max_radio = 50
+mutation = 10
 
 
 class Bee:
@@ -14,8 +17,10 @@ class Bee:
         self.deflection_angle = 0
         self.max_distance = 0
         self.genes = []
+        self.genes_bin = ""
         self.x = 0
         self.y = 0
+        self.origin = True
 
         self.parents = []
         self.name = ""
@@ -37,10 +42,25 @@ class Bee:
     def generate_parent(self):
         self.favorite_color = random.choice(colors)
         self.favorite_direction = random.choice(directions)
-        self.deflection_angle = round(random.uniform(10, 45), 2)
-        self.max_distance = round(random.uniform(max_radio / 2, max_radio), 2)
+        self.deflection_angle = random.randint(0, 31)
+        self.max_distance = random.randint(0, max_radio)
+        self.origin = random.choice([0, 1])
+        if self.origin:
+            self.x = 0
+            self.y = 0
+        else:
+            self.x = self.max_distance * cos(self.favorite_direction)
+            self.y = self.max_distance * sin(self.favorite_direction)
 
-        self.genes += [self.favorite_color, self.favorite_direction, self.deflection_angle, self.max_distance]
+        self.genes += [self.origin, self.favorite_color, self.favorite_direction, self.deflection_angle,
+                       self.max_distance]
+
+        self.genes_bin += str(self.origin) + \
+                          colors_bin[colors.index(self.favorite_color)] + \
+                          directions_bin[directions.index(self.favorite_direction)] + \
+                          '{:05b}'.format(self.deflection_angle) + \
+                          '{:06b}'.format(self.max_distance)
+        print(self.genes, self.genes_bin)
 
     def route(self, flowers):
         flowers_in_area = []
@@ -108,5 +128,3 @@ class Bee:
 
                     break
 
-    def mutate(self, parent):
-        print()
