@@ -1,27 +1,35 @@
 from src.Bee import *
 from src.Flower import *
-from src.main_window import *
+from src.window import *
 
 num_bees = 10
 num_flowers = 100
 
 num_nectar = 0
 global_traveled_distance = 10000
+current_generation = 1
+last_generation = 1
+num_generations = 1
+generations = {}
+
+total_num_bees = 1
+total_num_flowers = 0
 
 
 def init():
+    global total_num_bees
     num_bees_aux = 0
     num_flowers_aux = 0
-
-    Bee().generate_parent()
     bees = []
     flowers = []
 
     while num_bees_aux < num_bees:
         bee = Bee()
         bee.generate_parent()
+        bee.name = "bee {}".format(total_num_bees)
         bees.append(bee)
         num_bees_aux += 1
+        total_num_bees += 1
 
     while num_flowers_aux < num_flowers:
         flower = Flower()
@@ -40,6 +48,7 @@ def init():
         bee.adaptability_percentage = percentage
         percentage_list.append(percentage)
 
+    generations[last_generation] = {"bees": bees, "flowers": flowers}
     print("\n\nRESULT\n")
     for bee in bees:
         print(bee)
@@ -56,13 +65,27 @@ def init():
         selected_bees.remove(parent2)
 
     # GUI
-    main_window = MainWindow()
-    while not main_window.game_done:
-        main_window.show_window()
+    root = Tk()
+    window = Window(root)
+    window.pack(fill=BOTH, expand=1)
+    window.fill_board(flowers, str(current_generation))
+
+    root.wm_title("Bees and Flowers")
+    root.geometry("1200x800")
+
+    root.mainloop()
 
 
 def cross_bees(parent1, parent2):
     print()
+
+
+def click_next():
+    print("next")
+
+
+def click_previous():
+    print("previous")
 
 
 if __name__ == '__main__':

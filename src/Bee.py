@@ -4,7 +4,7 @@ from numpy import sqrt
 colors = [(255, 0, 0), (255, 128, 0), (255, 255, 0), (0, 255, 0), (0, 255, 255), (0, 0, 255),
           (128, 0, 255), (255, 0, 128)]
 directions = [270, 90, 0, 180, 315, 225, 45, 135]
-max_radio = 100
+max_radio = 50
 
 
 class Bee:
@@ -16,6 +16,9 @@ class Bee:
         self.genes = []
         self.x = 0
         self.y = 0
+
+        self.parents = []
+        self.name = ""
 
         self.traveled_distance = 0
         self.max_traveled_distance = 2 * max_radio
